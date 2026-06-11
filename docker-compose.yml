@@ -1,0 +1,9 @@
+services:
+  log-environment:
+    build:
+      context: .
+      dockerfile: log_environment/Dockerfile
+    volumes:
+      - ./priv/logs:/var/log/beamwatch
+    environment:
+      LOG_DIR: /var/log/beamwatch
