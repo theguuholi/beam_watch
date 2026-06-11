@@ -70,6 +70,7 @@ defmodule BeamWatch.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:ex_doc, "~> 0.35", runtime: false},
+      {:quokka, "~> 2.13", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:mix_test_watch, "~> 1.0", only: [:dev, :test], runtime: false},
       {:sobelow, "~> 0.14"},

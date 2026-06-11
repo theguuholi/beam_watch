@@ -51,7 +51,7 @@ defmodule BeamWatch.LogFeedTest do
       |> Profiles.get()
       |> Enum.filter(&String.contains?(&1.line, "container=plex event=die"))
 
-    timestamps = Enum.map(die_events, &timestamp!/1) |> Enum.sort(DateTime)
+    timestamps = die_events |> Enum.map(&timestamp!/1) |> Enum.sort(DateTime)
 
     assert length(die_events) == 4
     assert DateTime.diff(List.last(timestamps), List.first(timestamps), :second) <= 60

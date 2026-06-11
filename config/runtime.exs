@@ -38,8 +38,6 @@ if config_env() == :prod do
 
   host = System.get_env("PHX_HOST") || "example.com"
 
-  config :beamwatch, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
-
   config :beamwatch, BeamWatchWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
@@ -50,6 +48,8 @@ if config_env() == :prod do
       ip: {0, 0, 0, 0, 0, 0, 0, 0}
     ],
     secret_key_base: secret_key_base
+
+  config :beamwatch, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
   # ## SSL Support
   #

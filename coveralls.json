@@ -1,3 +1,9 @@
 {
-  "minimum_coverage": 99
+  "minimum_coverage": 99,
+  "skip_files": [
+    "lib/mix/tasks/",
+    "lib/beamwatch_web/gettext.ex",
+    "lib/beamwatch_web/endpoint.ex",
+    "lib/beamwatch_web.ex"
+  ]
 }

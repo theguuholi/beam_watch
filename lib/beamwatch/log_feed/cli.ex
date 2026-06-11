@@ -23,9 +23,7 @@ defmodule BeamWatch.LogFeed.CLI do
         ]
       )
 
-    if invalid != [] do
-      {:error, "Invalid options: #{inspect(invalid)}"}
-    else
+    if invalid == [] do
       profile = Keyword.get(opts, :profile, "sample")
       target = Keyword.get(opts, :target, "priv/logs")
       speed = Keyword.get(opts, :speed, 1.0)
@@ -36,6 +34,8 @@ defmodule BeamWatch.LogFeed.CLI do
         entries when is_list(entries) -> Runner.run(entries, target, speed, loop?, quiet: quiet?)
         {:error, {:unknown_profile, name}} -> {:error, "Profile not found: #{name}"}
       end
+    else
+      {:error, "Invalid options: #{inspect(invalid)}"}
     end
   end
 

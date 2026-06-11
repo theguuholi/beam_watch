@@ -43,7 +43,7 @@ defmodule BeamWatch.LogFeed.Runner do
     File.mkdir_p!(Path.dirname(path))
     File.write!(path, entry.line <> "\n", [:append])
 
-    unless Keyword.get(opts, :quiet, false) do
+    if !Keyword.get(opts, :quiet, false) do
       IO.puts("[#{entry.source}] #{entry.line}")
     end
   end
