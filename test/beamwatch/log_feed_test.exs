@@ -13,7 +13,7 @@ defmodule BeamWatch.LogFeedTest do
     text = Enum.map_join(entries, "\n", & &1.line)
 
     assert entries == Profiles.get("sample")
-    assert Enum.count(entries) < Enum.count(Profiles.get("validation"))
+    assert Enum.count(entries) < ("validation" |> Profiles.get() |> Enum.count())
     assert text =~ "container=plex event=die"
     assert text =~ "disk3 SMART warning"
     assert text =~ "Permission denied share=media"
@@ -54,7 +54,9 @@ defmodule BeamWatch.LogFeedTest do
     timestamps = die_events |> Enum.map(&timestamp!/1) |> Enum.sort(DateTime)
 
     assert length(die_events) == 4
-    assert DateTime.diff(List.last(timestamps), List.first(timestamps), :second) <= 60
+    first_ts = List.first(timestamps)
+    last_ts = List.last(timestamps)
+    assert DateTime.diff(last_ts, first_ts, :second) <= 60
   end
 
   test "validation includes false-positive guards that should not alert by themselves" do
@@ -130,12 +132,10 @@ defmodule BeamWatch.LogFeedTest do
         end)
 
       assert output =~ "[docker.log]"
-      assert File.read!(Path.join(target, "docker.log")) =~ "container=plex event=die"
-      assert File.read!(Path.join(target, "syslog.log")) =~ "disk3 SMART warning"
-      assert File.read!(Path.join(target, "smb.log")) =~ "Permission denied share=media"
-
-      assert File.read!(Path.join(target, "libvirt.log")) =~
-               "vm=windows11 action=start status=failed"
+      assert target |> Path.join("docker.log") |> File.read!() =~ "container=plex event=die"
+      assert target |> Path.join("syslog.log") |> File.read!() =~ "disk3 SMART warning"
+      assert target |> Path.join("smb.log") |> File.read!() =~ "Permission denied share=media"
+      assert target |> Path.join("libvirt.log") |> File.read!() =~ "vm=windows11 action=start status=failed"
     after
       File.rm_rf(target)
     end
@@ -160,7 +160,7 @@ defmodule BeamWatch.LogFeedTest do
         end)
 
       assert output == ""
-      assert File.read!(Path.join(target, "docker.log")) =~ "container=plex event=die"
+      assert target |> Path.join("docker.log") |> File.read!() =~ "container=plex event=die"
     after
       File.rm_rf(target)
     end
@@ -178,8 +178,8 @@ defmodule BeamWatch.LogFeedTest do
 
       capture_io(fn -> assert Runner.run(entries, target, 100, false) == :ok end)
 
-      assert File.exists?(Path.join(target, "samba/log.smbd"))
-      assert File.exists?(Path.join(target, "samba/log.rpcd_lsad"))
+      assert target |> Path.join("samba/log.smbd") |> File.exists?()
+      assert target |> Path.join("samba/log.rpcd_lsad") |> File.exists?()
     after
       File.rm_rf(target)
     end
@@ -187,7 +187,9 @@ defmodule BeamWatch.LogFeedTest do
 
   test "docker log environment loads only the compact feeder modules" do
     run_script =
-      File.read!(Path.expand("../../log_environment/run.sh", __DIR__))
+      "../../log_environment/run.sh"
+      |> Path.expand(__DIR__)
+      |> File.read!()
 
     assert run_script =~ "log_feed/fixtures.ex"
     assert run_script =~ ~s(\\"--profile\\", \\"validation\\")

@@ -40,7 +40,7 @@ defmodule BeamWatch.LogFeed.Runner do
     path = Path.join(target, entry.source)
 
     Process.sleep(delay)
-    File.mkdir_p!(Path.dirname(path))
+    path |> Path.dirname() |> File.mkdir_p!()
     File.write!(path, entry.line <> "\n", [:append])
 
     if !Keyword.get(opts, :quiet, false) do

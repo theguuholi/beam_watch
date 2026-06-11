@@ -21,7 +21,7 @@ if System.get_env("PHX_SERVER") do
 end
 
 config :beamwatch, BeamWatchWeb.Endpoint,
-  http: [port: String.to_integer(System.get_env("PORT", "4000"))]
+  http: [port: "PORT" |> System.get_env("4000") |> String.to_integer()]
 
 if config_env() == :prod do
   # The secret key base is used to sign/encrypt cookies and other secrets.
