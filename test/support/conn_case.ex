@@ -20,6 +20,7 @@ defmodule BeamWatchWeb.ConnCase do
   using do
     quote do
       use BeamWatchWeb, :verified_routes
+
       import BeamWatchWeb.ConnCase
       import Phoenix.ConnTest
       import Plug.Conn

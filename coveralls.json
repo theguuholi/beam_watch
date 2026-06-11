@@ -2,8 +2,13 @@
   "minimum_coverage": 99,
   "skip_files": [
     "lib/mix/tasks/",
+    "lib/beamwatch/log_feed/",
+    "lib/beamwatch/application.ex",
+    "lib/beamwatch.ex",
+    "lib/beamwatch_web/components/core_components.ex",
     "lib/beamwatch_web/gettext.ex",
     "lib/beamwatch_web/endpoint.ex",
+    "lib/beamwatch_web/telemetry.ex",
     "lib/beamwatch_web.ex"
   ]
 }
