@@ -1,20 +1,13 @@
 [
   verbose: false,
   private: false,
-  router: "WayloWeb.Router",
+  router: "BeamWatchWeb.Router",
   exit: "high",
   format: "txt",
   out: "",
   threshold: "medium",
   ignore: [
-    # CSP headers are handled at the infrastructure layer (Fly.io / CDN).
+        # CSP headers are handled at the infrastructure layer (Fly.io / CDN).
     "Config.CSP",
-    # The LiveState socket (/socket) serves the embeddable widget on arbitrary customer
-    # domains. Authentication is JWT-based (tokens in join params, not cookies), so
-    # cross-site WebSocket hijacking is not a viable attack vector.
-    "Config.CSWH",
-    # TLS is terminated by the Fly.io load balancer; the app listens on plain HTTP
-    # internally. force_ssl/HSTS is configured in prod.exs.
-    "Config.HTTPS"
-  ]
+    ]
 ]
