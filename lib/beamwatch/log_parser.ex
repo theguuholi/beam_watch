@@ -43,11 +43,8 @@ defmodule BeamWatch.LogParser do
     |> Regex.scan(payload)
     |> Enum.reduce(%{}, fn match, acc ->
       case match do
-        # Quoted value (3 elements): [full_match, key, quoted_value]
-        [_, key, quoted] when length(match) == 3 -> Map.put(acc, key, quoted)
-        # Unquoted value (4 elements): [full_match, key, "", unquoted_value]
-        [_, key, "", value] when length(match) == 4 -> Map.put(acc, key, value)
-        # Catch-all for other patterns
+        [_, key, quoted] -> Map.put(acc, key, quoted)
+        [_, key, "", value] -> Map.put(acc, key, value)
         _ -> acc
       end
     end)
