@@ -37,6 +37,7 @@ jobs:
           --health-retries 5
 
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-elixir
         with:
           elixir-version: ${{ inputs.elixir-version }}
@@ -68,6 +69,7 @@ jobs:
           --health-retries 5
 
     steps:
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup-elixir
         with:
           elixir-version: ${{ inputs.elixir-version }}
