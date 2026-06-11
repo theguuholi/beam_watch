@@ -28,7 +28,7 @@ defmodule BeamWatch.LogParserTest do
       line = "not-a-timestamp service=plex healthcheck"
 
       assert {:ok, event} = LogParser.parse_line(line, "app.log")
-      assert event.timestamp != nil
+      assert is_struct(event.timestamp, DateTime)
       assert event.raw == line
     end
 
@@ -52,6 +52,14 @@ defmodule BeamWatch.LogParserTest do
       assert {:ok, event} = LogParser.parse_line(line, "smb.log")
       assert event.fields["share"] == "media"
       assert event.fields["user"] == "guest"
+    end
+
+    test "parses empty quoted values" do
+      line = "2026-06-05T15:10:00Z container=test message=\"\" status=ok"
+
+      assert {:ok, event} = LogParser.parse_line(line, "test.log")
+      assert event.fields["message"] == ""
+      assert event.fields["status"] == "ok"
     end
   end
 end
