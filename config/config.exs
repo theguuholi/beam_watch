@@ -7,10 +7,6 @@
 # General application configuration
 import Config
 
-config :beamwatch,
-  namespace: BeamWatch,
-  generators: [timestamp_type: :utc_datetime]
-
 # Configure the endpoint
 config :beamwatch, BeamWatchWeb.Endpoint,
   url: [host: "localhost"],
@@ -22,6 +18,10 @@ config :beamwatch, BeamWatchWeb.Endpoint,
   pubsub_server: BeamWatch.PubSub,
   live_view: [signing_salt: "gBc/qNqg"]
 
+config :beamwatch,
+  namespace: BeamWatch,
+  generators: [timestamp_type: :utc_datetime]
+
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.25.4",
@@ -32,17 +32,6 @@ config :esbuild,
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
 
-# Configure tailwind (the version is required)
-config :tailwind,
-  version: "4.1.12",
-  beamwatch: [
-    args: ~w(
-      --input=assets/css/app.css
-      --output=priv/static/assets/css/app.css
-    ),
-    cd: Path.expand("..", __DIR__)
-  ]
-
 # Configure Elixir's Logger
 config :logger, :default_formatter,
   format: "$time $metadata[$level] $message\n",
@@ -51,6 +40,18 @@ config :logger, :default_formatter,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
-# Import environment specific config. This must remain at the bottom
-# of this file so it overrides the configuration defined above.
+# Configure tailwind (the version is required)
+config :tailwind,
+  version: "4.1.12",
+  beamwatch: [
+    args: ~w(
+      --input=assets/css/app.css
+      --output=priv/static/assets/css/app.css
+    ),
+
+    # Import environment specific config. This must remain at the bottom
+    # of this file so it overrides the configuration defined above.
+    cd: Path.expand("..", __DIR__)
+  ]
+
 import_config "#{config_env()}.exs"

@@ -1,0 +1,75 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# Versions are defined here — update in one place and they propagate to all jobs.
+# Note: workflow_call inputs don't support env context, so the values below
+# must be kept in sync with the literals passed to each reusable workflow.
+env:
+  MIX_ENV: test
+  ELIXIR_VERSION: "1.20.0"
+  OTP_VERSION: "29.0.1"
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    name: Setup Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: ${{ env.OTP_VERSION }}
+          elixir-version: ${{ env.ELIXIR_VERSION }}
+
+      - name: Auth git for private deps
+        run: git config --global url."https://x-access-token:${{ secrets.GH_PRIVATE_DEPS_TOKEN }}@github.com/".insteadOf "https://github.com/"
+
+      - name: Cache dependencies
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-v2-otp${{ env.OTP_VERSION }}-elixir${{ env.ELIXIR_VERSION }}-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-v2-otp${{ env.OTP_VERSION }}-elixir${{ env.ELIXIR_VERSION }}-
+
+      - name: Install and compile dependencies
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+          mix deps.get
+          mix deps.compile
+          mix compile --warnings-as-errors
+
+  quality:
+    needs: setup
+    uses: ./.github/workflows/ci-quality.yml
+    with:
+      elixir-version: "1.20.0"
+      otp-version: "29.0.1"
+
+  analysis:
+    needs: setup
+    uses: ./.github/workflows/ci-analysis.yml
+    with:
+      elixir-version: "1.20.0"
+      otp-version: "29.0.1"
+
+  test:
+    needs: setup
+    uses: ./.github/workflows/ci-test.yml
+    with:
+      elixir-version: "1.20.0"
+      otp-version: "29.0.1"

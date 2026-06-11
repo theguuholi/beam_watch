@@ -1,0 +1,36 @@
+name: Static Analysis
+
+on:
+  workflow_call:
+    inputs:
+      elixir-version:
+        required: true
+        type: string
+      otp-version:
+        required: true
+        type: string
+
+env:
+  MIX_ENV: test
+
+jobs:
+  dialyzer:
+    name: Dialyzer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-elixir
+        with:
+          elixir-version: ${{ inputs.elixir-version }}
+          otp-version: ${{ inputs.otp-version }}
+
+      - name: Cache PLT
+        uses: actions/cache@v4
+        with:
+          path: priv/plts
+          key: ${{ runner.os }}-plt-v2-otp${{ inputs.otp-version }}-elixir${{ inputs.elixir-version }}
+          save-always: true
+
+      - run: mkdir -p priv/plts
+
+      - run: mix dialyzer --format github

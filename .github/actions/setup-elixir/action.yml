@@ -1,0 +1,25 @@
+name: Setup Elixir Project
+description: Configure BEAM toolchain and restore dependency cache
+
+inputs:
+  elixir-version:
+    required: true
+  otp-version:
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: erlef/setup-beam@v1
+      with:
+        elixir-version: ${{ inputs.elixir-version }}
+        otp-version: ${{ inputs.otp-version }}
+
+    - uses: actions/cache@v4
+      with:
+        path: |
+          deps
+          _build
+        key: ${{ runner.os }}-mix-v2-otp${{ inputs.otp-version }}-elixir${{ inputs.elixir-version }}-${{ hashFiles('**/mix.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-mix-v2-otp${{ inputs.otp-version }}-elixir${{ inputs.elixir-version }}-

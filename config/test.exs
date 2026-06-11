@@ -7,18 +7,18 @@ config :beamwatch, BeamWatchWeb.Endpoint,
   secret_key_base: "SClscDYVSf2tBSQighnW1nJBEuQgPbgSokB1GpvlHgSwVl50uAWsGP9Kzr+1AxyW",
   server: false
 
+config :beamwatch, dev_log_controls: true
+
 # Print only warnings and errors during test
 config :logger, level: :warning
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
 
-# Enable helpful, but potentially expensive runtime checks
-config :phoenix_live_view,
-  enable_expensive_runtime_checks: true
-
 # Sort query params output of verified routes for robust url comparisons
 config :phoenix,
   sort_verified_routes_query_params: true
 
-config :beamwatch, dev_log_controls: true
+# Enable helpful, but potentially expensive runtime checks
+config :phoenix_live_view,
+  enable_expensive_runtime_checks: true

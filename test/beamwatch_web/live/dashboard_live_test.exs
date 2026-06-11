@@ -30,8 +30,8 @@ defmodule BeamWatchWeb.DashboardLiveTest do
 
     assert html =~ "Dev log controls"
     assert render_click(element(view, "button", "Add validation logs")) =~ "Added"
-    assert File.read!(Path.join(target, "docker.log")) =~ "container=plex event=die"
-    assert File.read!(Path.join(target, "smb.log")) =~ "Permission denied share=media"
+    assert target |> Path.join("docker.log") |> File.read!() =~ "container=plex event=die"
+    assert target |> Path.join("smb.log") |> File.read!() =~ "Permission denied share=media"
 
     assert render_click(element(view, "button", "Clear log dir")) =~ "Cleared"
     assert File.ls!(target) == []

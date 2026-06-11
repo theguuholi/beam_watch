@@ -1,6 +1,8 @@
 defmodule BeamWatch.LogFeed.Runner do
   @moduledoc false
 
+  @dialyzer {:nowarn_function, do_run: 5}
+
   def run(entries, target, speed, loop?, opts \\ [])
 
   def run(entries, target, speed, loop?, opts) when is_list(entries) do
@@ -40,10 +42,10 @@ defmodule BeamWatch.LogFeed.Runner do
     path = Path.join(target, entry.source)
 
     Process.sleep(delay)
-    File.mkdir_p!(Path.dirname(path))
+    path |> Path.dirname() |> File.mkdir_p!()
     File.write!(path, entry.line <> "\n", [:append])
 
-    unless Keyword.get(opts, :quiet, false) do
+    if !Keyword.get(opts, :quiet, false) do
       IO.puts("[#{entry.source}] #{entry.line}")
     end
   end
