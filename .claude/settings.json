@@ -1,0 +1,21 @@
+{
+  "extraKnownMarketplaces": {
+    "visual-explainer-marketplace": {
+      "source": { "source": "github", "repo": "nicobailon/visual-explainer" }
+    },
+    "claude-code-elixir": {
+      "source": { "source": "github", "repo": "georgeguimaraes/claude-code-elixir" }
+    },
+    "plannotator": {
+      "source": { "source": "github", "repo": "backnotprop/plannotator" }
+    }
+  },
+  "enabledPlugins": {
+    "visual-explainer@visual-explainer-marketplace": true,
+    "elixir-lsp@claude-code-elixir": true,
+    "mix-compile@claude-code-elixir": true,
+    "mix-format@claude-code-elixir": true,
+    "mix-credo@claude-code-elixir": true,
+    "plannotator@plannotator": true
+  }
+}
