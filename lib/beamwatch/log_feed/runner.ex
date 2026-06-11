@@ -1,6 +1,8 @@
 defmodule BeamWatch.LogFeed.Runner do
   @moduledoc false
 
+  @dialyzer {:nowarn_function, do_run: 5}
+
   def run(entries, target, speed, loop?, opts \\ [])
 
   def run(entries, target, speed, loop?, opts) when is_list(entries) do

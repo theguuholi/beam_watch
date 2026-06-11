@@ -13,7 +13,7 @@ defmodule BeamWatch.LogFeedTest do
     text = Enum.map_join(entries, "\n", & &1.line)
 
     assert entries == Profiles.get("sample")
-    assert Enum.count(entries) < ("validation" |> Profiles.get() |> Enum.count())
+    assert Enum.count(entries) < "validation" |> Profiles.get() |> Enum.count()
     assert text =~ "container=plex event=die"
     assert text =~ "disk3 SMART warning"
     assert text =~ "Permission denied share=media"
@@ -135,7 +135,9 @@ defmodule BeamWatch.LogFeedTest do
       assert target |> Path.join("docker.log") |> File.read!() =~ "container=plex event=die"
       assert target |> Path.join("syslog.log") |> File.read!() =~ "disk3 SMART warning"
       assert target |> Path.join("smb.log") |> File.read!() =~ "Permission denied share=media"
-      assert target |> Path.join("libvirt.log") |> File.read!() =~ "vm=windows11 action=start status=failed"
+
+      assert target |> Path.join("libvirt.log") |> File.read!() =~
+               "vm=windows11 action=start status=failed"
     after
       File.rm_rf(target)
     end

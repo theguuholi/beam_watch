@@ -39,6 +39,7 @@ defmodule BeamWatch.LogFeed.CLI do
     end
   end
 
+  @spec abort(binary()) :: no_return()
   defp abort(message) do
     IO.puts(:stderr, message)
     System.halt(1)
