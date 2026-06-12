@@ -3,6 +3,6 @@ defmodule BeamWatchWeb.PageControllerTest do
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")
-    assert html_response(conn, 200) =~ "Incident triage"
+    assert html_response(conn, 200) =~ "Incident Triage"
   end
 end

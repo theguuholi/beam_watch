@@ -69,6 +69,11 @@ defmodule BeamWatch.Incidents.IncidentStore do
     GenServer.call(server, {:clear_silence, incident_id})
   end
 
+  @spec reset(GenServer.server()) :: :ok
+  def reset(server \\ __MODULE__) do
+    GenServer.call(server, :reset)
+  end
+
   # --- GenServer callbacks ---
 
   @impl true
@@ -134,6 +139,21 @@ defmodule BeamWatch.Incidents.IncidentStore do
   @impl true
   def handle_call(:get_state, _from, state) do
     {:reply, state, state}
+  end
+
+  @impl true
+  def handle_call(:reset, _from, state) do
+    clean = %{
+      state
+      | incidents: %{},
+        source_health: %{},
+        recent_activity: [],
+        silenced_types: MapSet.new(),
+        detector_states: Map.new(@detectors, fn {key, _mod} -> {key, %{}} end)
+    }
+
+    broadcast(clean)
+    {:reply, :ok, clean}
   end
 
   @impl true

@@ -32,6 +32,7 @@ defmodule BeamWatchWeb.ConnCase do
   end
 
   setup _tags do
+    BeamWatch.Incidents.IncidentStore.reset()
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
 end
