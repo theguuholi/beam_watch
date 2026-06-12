@@ -28,11 +28,9 @@ defmodule BeamWatch.Incidents.Detectors.ContainerRestartLoop do
   defp supporting_evidence?(%ParsedLine{source: "app.log", payload: p}),
     do: p =~ "healthcheck failed"
 
-  defp supporting_evidence?(%ParsedLine{source: "nginx.log", payload: p}),
-    do: p =~ "unavailable"
+  defp supporting_evidence?(%ParsedLine{source: "nginx.log", payload: p}), do: p =~ "unavailable"
 
-  defp supporting_evidence?(%ParsedLine{source: "docker.log", payload: p}),
-    do: p =~ "event=start"
+  defp supporting_evidence?(%ParsedLine{source: "docker.log", payload: p}), do: p =~ "event=start"
 
   defp supporting_evidence?(_), do: false
 
@@ -110,7 +108,11 @@ defmodule BeamWatch.Incidents.Detectors.ContainerRestartLoop do
   end
 
   defp append_evidence(%Incident{} = inc, %ParsedLine{at: at} = line) do
-    %{inc | last_seen: at, evidence: inc.evidence ++ [evidence_entry({at, line.source, line.raw})]}
+    %{
+      inc
+      | last_seen: at,
+        evidence: inc.evidence ++ [evidence_entry({at, line.source, line.raw})]
+    }
   end
 
   defp evidence_entry({at, source, raw}), do: %{at: at, source: source, line: raw}

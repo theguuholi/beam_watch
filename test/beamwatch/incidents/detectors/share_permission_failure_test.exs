@@ -8,7 +8,13 @@ defmodule BeamWatch.Incidents.Detectors.SharePermissionFailureTest do
   defp pl(source, offset_seconds, payload) do
     base = ~U[2026-06-05 15:00:00Z]
     at = DateTime.add(base, offset_seconds, :second)
-    %ParsedLine{at: at, source: source, payload: payload, raw: "#{DateTime.to_iso8601(at)} #{payload}"}
+
+    %ParsedLine{
+      at: at,
+      source: source,
+      payload: payload,
+      raw: "#{DateTime.to_iso8601(at)} #{payload}"
+    }
   end
 
   defp run_lines(lines) do

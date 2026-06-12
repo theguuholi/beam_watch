@@ -8,7 +8,13 @@ defmodule BeamWatch.Incidents.Detectors.VmBootFailureTest do
   defp pl(source, offset_seconds, payload) do
     base = ~U[2026-06-05 15:00:00Z]
     at = DateTime.add(base, offset_seconds, :second)
-    %ParsedLine{at: at, source: source, payload: payload, raw: "#{DateTime.to_iso8601(at)} #{payload}"}
+
+    %ParsedLine{
+      at: at,
+      source: source,
+      payload: payload,
+      raw: "#{DateTime.to_iso8601(at)} #{payload}"
+    }
   end
 
   defp run_lines(lines) do
@@ -27,7 +33,12 @@ defmodule BeamWatch.Incidents.Detectors.VmBootFailureTest do
 
     {incidents, _state} = VmBootFailure.process(line, %{}, %{})
 
-    assert %Incident{type: :vm_boot_failure, resource: "windows11", status: :active, severity: :critical} =
+    assert %Incident{
+             type: :vm_boot_failure,
+             resource: "windows11",
+             status: :active,
+             severity: :critical
+           } =
              incidents["vm_boot_failure:windows11"]
   end
 

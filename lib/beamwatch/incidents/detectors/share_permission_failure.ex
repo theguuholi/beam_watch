@@ -52,7 +52,14 @@ defmodule BeamWatch.Incidents.Detectors.SharePermissionFailure do
             updated = %{inc | last_seen: at, evidence: inc.evidence ++ [evidence_entry(line)]}
             Map.put(incidents, incident_id, updated)
           else
-            reset = %{inc | first_seen: at, last_seen: at, evidence: [evidence_entry(line)], status: :active}
+            reset = %{
+              inc
+              | first_seen: at,
+                last_seen: at,
+                evidence: [evidence_entry(line)],
+                status: :active
+            }
+
             Map.put(incidents, incident_id, reset)
           end
       end

@@ -390,8 +390,7 @@ defmodule BeamWatchWeb.DashboardLive do
     Calendar.strftime(dt, "%m-%d %H:%M:%S")
   end
 
-  defp format_bytes(bytes) when bytes >= 1_048_576,
-    do: "#{Float.round(bytes / 1_048_576, 1)} MB"
+  defp format_bytes(bytes) when bytes >= 1_048_576, do: "#{Float.round(bytes / 1_048_576, 1)} MB"
 
   defp format_bytes(bytes) when bytes >= 1024, do: "#{Float.round(bytes / 1024, 1)} KB"
   defp format_bytes(bytes), do: "#{bytes} B"
