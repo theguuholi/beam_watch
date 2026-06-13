@@ -49,7 +49,7 @@ defmodule BeamWatch.Incidents.Detectors.SharePermissionFailure do
 
         %Incident{last_seen: last_seen} = inc ->
           if DateTime.diff(at, last_seen, :second) <= @window_seconds do
-            updated = %{inc | last_seen: at, evidence: inc.evidence ++ [evidence_entry(line)]}
+            updated = %{inc | last_seen: at, evidence: [evidence_entry(line) | inc.evidence]}
             Map.put(incidents, incident_id, updated)
           else
             reset = %{

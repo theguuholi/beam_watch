@@ -176,16 +176,7 @@ defmodule BeamWatch.Incidents.IncidentStore do
 
       %Incident{type: type} ->
         silenced_types = MapSet.put(state.silenced_types, type)
-
-        incidents =
-          Map.new(state.incidents, fn {k, inc} ->
-            if inc.type == type and inc.status in [:active, :acknowledged] do
-              {k, %{inc | status: :silenced, silence_scope: :type}}
-            else
-              {k, inc}
-            end
-          end)
-
+        incidents = Map.new(state.incidents, &silence_incident_of_type(&1, type))
         new_state = %{state | silenced_types: silenced_types, incidents: incidents}
         broadcast(new_state)
         {:reply, :ok, new_state}
@@ -237,13 +228,23 @@ defmodule BeamWatch.Incidents.IncidentStore do
     if MapSet.size(silenced_types) == 0 do
       incidents
     else
-      Map.new(incidents, fn {k, inc} ->
-        if MapSet.member?(silenced_types, inc.type) and inc.status == :active do
-          {k, %{inc | status: :silenced, silence_scope: :type}}
-        else
-          {k, inc}
-        end
-      end)
+      Map.new(incidents, &maybe_silence_by_type(&1, silenced_types))
+    end
+  end
+
+  defp maybe_silence_by_type({k, inc}, silenced_types) do
+    if MapSet.member?(silenced_types, inc.type) and inc.status == :active do
+      {k, %{inc | status: :silenced, silence_scope: :type}}
+    else
+      {k, inc}
+    end
+  end
+
+  defp silence_incident_of_type({k, inc}, type) do
+    if inc.type == type and inc.status in [:active, :acknowledged] do
+      {k, %{inc | status: :silenced, silence_scope: :type}}
+    else
+      {k, inc}
     end
   end
 

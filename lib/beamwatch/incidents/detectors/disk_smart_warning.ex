@@ -41,7 +41,7 @@ defmodule BeamWatch.Incidents.Detectors.DiskSmartWarning do
           Map.put(incidents, incident_id, inc)
 
         inc ->
-          updated = %{inc | last_seen: at, evidence: inc.evidence ++ [evidence_entry(line)]}
+          updated = %{inc | last_seen: at, evidence: [evidence_entry(line) | inc.evidence]}
           Map.put(incidents, incident_id, updated)
       end
 
@@ -63,7 +63,7 @@ defmodule BeamWatch.Incidents.Detectors.DiskSmartWarning do
             inc
             | status: :resolved,
               last_seen: at,
-              evidence: inc.evidence ++ [evidence_entry(line)]
+              evidence: [evidence_entry(line) | inc.evidence]
           }
 
           Map.put(incidents, incident_id, updated)

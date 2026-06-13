@@ -24,7 +24,7 @@ defmodule BeamWatch.Ingestion.LogWatcherTest do
     Process.sleep(200)
     state = IncidentStore.get_state(store)
 
-    assert length(state.recent_activity) >= 1
+    assert state.recent_activity != []
     assert hd(state.recent_activity).line =~ "container=plex event=die"
   end
 
@@ -68,6 +68,6 @@ defmodule BeamWatch.Ingestion.LogWatcherTest do
 
     state = IncidentStore.get_state(store)
     # After rotation, watcher resets offset and still reads new lines
-    assert length(state.recent_activity) >= 1
+    assert state.recent_activity != []
   end
 end

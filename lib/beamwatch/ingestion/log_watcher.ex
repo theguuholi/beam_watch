@@ -56,32 +56,7 @@ defmodule BeamWatch.Ingestion.LogWatcher do
 
     case File.stat(path) do
       {:ok, %File.Stat{size: size}} ->
-        {offset, buffer, rotated?} =
-          if size < offset, do: {0, "", true}, else: {offset, buffer, false}
-
-        {new_offset, new_buffer, failures, last_log_at} =
-          if size > offset do
-            process_new_bytes(path, offset, buffer, filename, store)
-          else
-            {offset, buffer, 0, nil}
-          end
-
-        IncidentStore.update_source_health(store, %SourceHealth{
-          file: filename,
-          exists?: true,
-          size_bytes: size,
-          last_read_at: DateTime.utc_now(),
-          last_log_at: last_log_at,
-          byte_offset: new_offset,
-          parse_failures: 0,
-          rotated?: rotated?
-        })
-
-        if failures > 0 do
-          Enum.each(1..failures, fn _ -> IncidentStore.ingest_malformed(store, filename) end)
-        end
-
-        Map.put(files, filename, %{offset: new_offset, buffer: new_buffer})
+        handle_file_readable(filename, path, size, offset, buffer, files, store)
 
       {:error, _} ->
         IncidentStore.update_source_health(store, %SourceHealth{
@@ -99,6 +74,35 @@ defmodule BeamWatch.Ingestion.LogWatcher do
     end
   end
 
+  defp handle_file_readable(filename, path, size, offset, buffer, files, store) do
+    {offset, buffer, rotated?} =
+      if size < offset, do: {0, "", true}, else: {offset, buffer, false}
+
+    {new_offset, new_buffer, failures, last_log_at} =
+      if size > offset do
+        process_new_bytes(path, offset, buffer, filename, store)
+      else
+        {offset, buffer, 0, nil}
+      end
+
+    IncidentStore.update_source_health(store, %SourceHealth{
+      file: filename,
+      exists?: true,
+      size_bytes: size,
+      last_read_at: DateTime.utc_now(),
+      last_log_at: last_log_at,
+      byte_offset: new_offset,
+      parse_failures: 0,
+      rotated?: rotated?
+    })
+
+    if failures > 0 do
+      Enum.each(1..failures, fn _ -> IncidentStore.ingest_malformed(store, filename) end)
+    end
+
+    Map.put(files, filename, %{offset: new_offset, buffer: new_buffer})
+  end
+
   defp process_new_bytes(path, offset, buffer, filename, store) do
     case File.open(path, [:read, :binary]) do
       {:ok, file} ->
@@ -111,22 +115,24 @@ defmodule BeamWatch.Ingestion.LogWatcher do
         {complete, remainder} = split_lines(all_content)
 
         {failures, last_log_at} =
-          Enum.reduce(complete, {0, nil}, fn raw, {f, ts} ->
-            case LogParser.parse(raw, filename) do
-              {:ok, pl} ->
-                IncidentStore.ingest_line(store, pl)
-                {f, pl.at}
-
-              {:malformed, _} ->
-                {f + 1, ts}
-            end
-          end)
+          Enum.reduce(complete, {0, nil}, &parse_and_ingest(&1, &2, filename, store))
 
         consumed = byte_size(all_content) - byte_size(remainder)
         {offset + consumed, remainder, failures, last_log_at}
 
       {:error, _} ->
         {offset, buffer, 0, nil}
+    end
+  end
+
+  defp parse_and_ingest(raw, {failures, last_log_at}, filename, store) do
+    case LogParser.parse(raw, filename) do
+      {:ok, pl} ->
+        IncidentStore.ingest_line(store, pl)
+        {failures, pl.at}
+
+      {:malformed, _} ->
+        {failures + 1, last_log_at}
     end
   end
 

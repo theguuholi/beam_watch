@@ -26,23 +26,24 @@ defmodule BeamWatch.Incidents.Detectors.VmBootFailure do
   defp vm_failed?(payload), do: payload =~ ~r/vm=\S+.*status=failed/
   defp vm_running?(payload), do: payload =~ ~r/vm=\S+.*status=running/
 
-  defp supporting_vm(payload) do
-    cond do
-      payload =~ "qemu-system-x86_64" and
-          (payload =~ "Permission denied" or payload =~ "-drive file=") ->
-        case Regex.run(~r|/domains/([^/]+)/|, payload) do
-          [_, vm] -> vm
-          _ -> nil
-        end
+  defp supporting_vm(payload), do: extract_qemu_vm(payload) || extract_port_missing_vm(payload)
 
-      payload =~ "port missing for vm=" ->
-        case Regex.run(~r/port missing for vm=(\S+)/, payload) do
-          [_, vm] -> vm
-          _ -> nil
-        end
+  defp extract_qemu_vm(payload) do
+    if payload =~ "qemu-system-x86_64" and
+         (payload =~ "Permission denied" or payload =~ "-drive file=") do
+      case Regex.run(~r|/domains/([^/]+)/|, payload) do
+        [_, vm] -> vm
+        _ -> nil
+      end
+    end
+  end
 
-      true ->
-        nil
+  defp extract_port_missing_vm(payload) do
+    if payload =~ "port missing for vm=" do
+      case Regex.run(~r/port missing for vm=(\S+)/, payload) do
+        [_, vm] -> vm
+        _ -> nil
+      end
     end
   end
 
@@ -68,7 +69,7 @@ defmodule BeamWatch.Incidents.Detectors.VmBootFailure do
           Map.put(incidents, incident_id, inc)
 
         inc ->
-          updated = %{inc | last_seen: at, evidence: inc.evidence ++ [evidence_entry(line)]}
+          updated = %{inc | last_seen: at, evidence: [evidence_entry(line) | inc.evidence]}
           Map.put(incidents, incident_id, updated)
       end
 
@@ -89,7 +90,7 @@ defmodule BeamWatch.Incidents.Detectors.VmBootFailure do
             inc
             | status: :resolved,
               last_seen: at,
-              evidence: inc.evidence ++ [evidence_entry(line)]
+              evidence: [evidence_entry(line) | inc.evidence]
           }
 
           Map.put(incidents, incident_id, updated)
@@ -110,7 +111,7 @@ defmodule BeamWatch.Incidents.Detectors.VmBootFailure do
           Map.put(incidents, incident_id, %{
             inc
             | last_seen: line.at,
-              evidence: inc.evidence ++ [evidence_entry(line)]
+              evidence: [evidence_entry(line) | inc.evidence]
           })
       end
 

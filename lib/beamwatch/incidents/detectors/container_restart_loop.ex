@@ -111,7 +111,7 @@ defmodule BeamWatch.Incidents.Detectors.ContainerRestartLoop do
     %{
       inc
       | last_seen: at,
-        evidence: inc.evidence ++ [evidence_entry({at, line.source, line.raw})]
+        evidence: [evidence_entry({at, line.source, line.raw}) | inc.evidence]
     }
   end
 
