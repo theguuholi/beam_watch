@@ -6,6 +6,8 @@ defmodule BeamWatchWeb.DashboardLive.IndexTest do
   alias BeamWatch.Incidents.Incident
   alias BeamWatch.Incidents.IncidentStore
   alias BeamWatch.Incidents.StoreState
+  alias BeamWatch.SourceHealth
+  alias BeamWatchWeb.DashboardLive.Components
 
   setup do
     IncidentStore.reset()
@@ -265,6 +267,198 @@ defmodule BeamWatchWeb.DashboardLive.IndexTest do
   end
 
   # ---------------------------------------------------------------------------
+  # incident_card/1 — evidence section
+  # ---------------------------------------------------------------------------
+
+  describe "incident_card/1 evidence section" do
+    test "shows evidence toggle button when incident has evidence", %{conn: conn} do
+      seed_incident(incident_with_evidence())
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      assert has_element?(view, "button[phx-click='toggle-evidence']", "Show 1 evidence line(s)")
+    end
+
+    test "shows 'Hide evidence' after toggling open", %{conn: conn} do
+      incident = incident_with_evidence()
+      seed_incident(incident)
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-evidence", %{"id" => incident.id})
+
+      assert has_element?(view, "button[phx-click='toggle-evidence']", "Hide evidence")
+    end
+
+    test "renders evidence entries when expanded", %{conn: conn} do
+      incident = incident_with_evidence()
+      seed_incident(incident)
+      {:ok, view, _html} = live(conn, ~p"/")
+
+      render_click(view, "toggle-evidence", %{"id" => incident.id})
+
+      assert has_element?(view, "span", "[docker.log]")
+      assert has_element?(view, "span", "container plex exited with code 1")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Source health panel
+  # ---------------------------------------------------------------------------
+
+  describe "source health panel" do
+    test "shows 'ok' badge for a healthy source", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      health = %SourceHealth{file: "docker.log", exists?: true}
+
+      push_store_state(view, %StoreState{source_health: %{"docker.log" => health}})
+
+      assert has_element?(view, "span", "ok")
+    end
+
+    test "shows 'missing' badge when the file does not exist", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      health = %SourceHealth{file: "docker.log", exists?: false}
+
+      push_store_state(view, %StoreState{source_health: %{"docker.log" => health}})
+
+      assert has_element?(view, "span", "missing")
+    end
+
+    test "shows 'rotated' badge when the file was rotated", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      health = %SourceHealth{file: "docker.log", exists?: true, rotated?: true}
+
+      push_store_state(view, %StoreState{source_health: %{"docker.log" => health}})
+
+      assert has_element?(view, "span", "rotated")
+    end
+
+    test "shows 'warnings' badge when parse_failures > 0", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      health = %SourceHealth{file: "docker.log", exists?: true, parse_failures: 3}
+
+      push_store_state(view, %StoreState{source_health: %{"docker.log" => health}})
+
+      assert has_element?(view, "span", "warnings")
+    end
+
+    test "formats size in MB when >= 1 MB", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      health = %SourceHealth{file: "docker.log", exists?: true, size_bytes: 2_097_152}
+
+      push_store_state(view, %StoreState{source_health: %{"docker.log" => health}})
+
+      assert has_element?(view, "td", "2.0 MB")
+    end
+
+    test "formats size in KB when >= 1 KB but < 1 MB", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      health = %SourceHealth{file: "docker.log", exists?: true, size_bytes: 2048}
+
+      push_store_state(view, %StoreState{source_health: %{"docker.log" => health}})
+
+      assert has_element?(view, "td", "2.0 KB")
+    end
+
+    test "formats size in bytes when < 1 KB", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/")
+      health = %SourceHealth{file: "docker.log", exists?: true, size_bytes: 512}
+
+      push_store_state(view, %StoreState{source_health: %{"docker.log" => health}})
+
+      assert has_element?(view, "td", "512 B")
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Components.format_type/1
+  # ---------------------------------------------------------------------------
+
+  describe "Components.format_type/1" do
+    test "returns human-readable labels for known incident types" do
+      assert Components.format_type(:container_restart_loop) == "Container Restart Loop"
+      assert Components.format_type(:disk_smart_warning) == "Disk SMART Warning"
+      assert Components.format_type(:share_permission_failure) == "Share Permission Failure"
+      assert Components.format_type(:vm_boot_failure) == "VM Boot Failure"
+    end
+
+    test "capitalises and splits underscores for unknown types" do
+      assert Components.format_type(:custom_alert) == "Custom alert"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Components.format_dt/1
+  # ---------------------------------------------------------------------------
+
+  describe "Components.format_dt/1" do
+    test "returns an em dash for nil" do
+      assert Components.format_dt(nil) == "—"
+    end
+
+    test "formats a DateTime as MM-DD HH:MM:SS" do
+      assert Components.format_dt(~U[2026-06-14 10:30:45Z]) == "06-14 10:30:45"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Components.severity_border/1
+  # ---------------------------------------------------------------------------
+
+  describe "Components.severity_border/1" do
+    test "returns red border for :critical" do
+      assert Components.severity_border(:critical) == "border-red-300"
+    end
+
+    test "returns amber border for :warning" do
+      assert Components.severity_border(:warning) == "border-amber-300"
+    end
+
+    test "falls back to zinc border for other severities" do
+      assert Components.severity_border(:info) == "border-zinc-200"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Components.severity_dot/1
+  # ---------------------------------------------------------------------------
+
+  describe "Components.severity_dot/1" do
+    test "returns red dot for :critical" do
+      assert Components.severity_dot(:critical) == "bg-red-500"
+    end
+
+    test "returns amber dot for :warning" do
+      assert Components.severity_dot(:warning) == "bg-amber-400"
+    end
+
+    test "falls back to zinc dot for other severities" do
+      assert Components.severity_dot(:info) == "bg-zinc-400"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # Components.status_badge_class/1
+  # ---------------------------------------------------------------------------
+
+  describe "Components.status_badge_class/1" do
+    test "returns red for :active" do
+      assert Components.status_badge_class(:active) == "bg-red-100 text-red-700"
+    end
+
+    test "returns amber for :acknowledged" do
+      assert Components.status_badge_class(:acknowledged) == "bg-amber-100 text-amber-700"
+    end
+
+    test "returns zinc for :silenced" do
+      assert Components.status_badge_class(:silenced) == "bg-zinc-100 text-zinc-600"
+    end
+
+    test "returns green for :resolved" do
+      assert Components.status_badge_class(:resolved) == "bg-green-100 text-green-700"
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # Helpers
   # ---------------------------------------------------------------------------
 
@@ -280,6 +474,10 @@ defmodule BeamWatchWeb.DashboardLive.IndexTest do
       evidence: [],
       silence_scope: nil
     }
+  end
+
+  defp incident_with_evidence do
+    %{active_incident() | evidence: [%{source: "docker.log", line: "container plex exited with code 1", at: ~U[2026-06-05 15:01:50Z]}]}
   end
 
   defp seed_incident(incident) do
