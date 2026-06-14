@@ -34,50 +34,49 @@ defmodule BeamWatch.Incidents.Detectors.ContainerRestartLoop do
 
   defp supporting_evidence?(_), do: false
 
+  @doc false
+  def new_incident(container, [{last_seen, _, _} | _] = recent) do
+    {first_seen, _, _} = List.last(recent)
+
+    %Incident{
+      id: "container_restart_loop:#{container}",
+      type: :container_restart_loop,
+      resource: container,
+      severity: :critical,
+      status: :active,
+      first_seen: first_seen,
+      last_seen: last_seen,
+      evidence: recent |> Enum.reverse() |> Enum.map(&evidence_entry/1),
+      silence_scope: nil
+    }
+  end
+
   defp handle_die(%ParsedLine{payload: p, at: at} = line, incidents, state) do
     [_, container] = Regex.run(~r/container=(\S+) event=die/, p)
 
-    prior_events = Map.get(state, container, [])
     cutoff = DateTime.add(at, -@die_window_seconds, :second)
 
     recent =
-      [{at, line.source, line.raw} | prior_events]
+      [{at, line.source, line.raw} | Map.get(state, container, [])]
       |> Enum.filter(fn {ts, _, _} -> DateTime.compare(ts, cutoff) != :lt end)
 
-    new_state = Map.put(state, container, recent)
     incident_id = "container_restart_loop:#{container}"
-
-    new_incidents =
-      if length(recent) >= @die_threshold do
-        case Map.get(incidents, incident_id) do
-          nil ->
-            {first_ts, _, _} = List.last(recent)
-
-            inc = %Incident{
-              id: incident_id,
-              type: :container_restart_loop,
-              resource: container,
-              severity: :critical,
-              status: :active,
-              first_seen: first_ts,
-              last_seen: at,
-              evidence: recent |> Enum.reverse() |> Enum.map(&evidence_entry/1),
-              silence_scope: nil
-            }
-
-            Map.put(incidents, incident_id, inc)
-
-          inc ->
-            Map.put(incidents, incident_id, append_evidence(inc, line))
-        end
-      else
-        case Map.get(incidents, incident_id) do
-          nil -> incidents
-          _inc -> Map.update!(incidents, incident_id, &append_evidence(&1, line))
-        end
-      end
+    new_state = Map.put(state, container, recent)
+    new_incidents = apply_die_event(incidents, incident_id, container, recent, line)
 
     {new_incidents, new_state}
+  end
+
+  defp apply_die_event(incidents, incident_id, container, recent, line) do
+    threshold_reached = length(recent) >= @die_threshold
+    existing = Map.get(incidents, incident_id)
+
+    case {threshold_reached, existing} do
+      {true, nil} -> Map.put(incidents, incident_id, new_incident(container, recent))
+      {true, inc} -> Map.put(incidents, incident_id, append_evidence(inc, line))
+      {false, nil} -> incidents
+      {false, _inc} -> Map.update!(incidents, incident_id, &append_evidence(&1, line))
+    end
   end
 
   defp handle_supporting(%ParsedLine{payload: p} = line, incidents, state) do

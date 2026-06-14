@@ -92,6 +92,15 @@ defmodule BeamWatch.Incidents.Detectors.SharePermissionFailureTest do
     assert incidents == %{}
   end
 
+  test "opens incident on app.log permission denied" do
+    line =
+      pl("app.log", 0, "app: Permission denied share=media path=/mnt/user/media/private")
+
+    {incidents, _state} = SharePermissionFailure.process(line, %{}, %{})
+
+    assert Map.has_key?(incidents, "share_permission_failure:media")
+  end
+
   test "ignores lines from other sources" do
     line = pl("docker.log", 0, "Permission denied share=media")
     {incidents, _state} = SharePermissionFailure.process(line, %{}, %{})

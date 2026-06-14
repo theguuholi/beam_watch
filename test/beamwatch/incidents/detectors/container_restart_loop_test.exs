@@ -117,4 +117,29 @@ defmodule BeamWatch.Incidents.Detectors.ContainerRestartLoopTest do
 
     assert incidents == %{}
   end
+
+  test "new_incident/2 builds incident with correct first/last seen and evidence order" do
+    recent = [
+      {~U[2026-06-05 15:01:21Z], "docker.log", "2026-06-05T15:01:21Z container=plex event=die"},
+      {~U[2026-06-05 15:01:15Z], "docker.log", "2026-06-05T15:01:15Z container=plex event=die"},
+      {~U[2026-06-05 15:01:08Z], "docker.log", "2026-06-05T15:01:08Z container=plex event=die"},
+      {~U[2026-06-05 15:01:00Z], "docker.log", "2026-06-05T15:01:00Z container=plex event=die"}
+    ]
+
+    incident = ContainerRestartLoop.new_incident("plex", recent)
+
+    assert %Incident{
+             id: "container_restart_loop:plex",
+             type: :container_restart_loop,
+             resource: "plex",
+             severity: :critical,
+             status: :active,
+             first_seen: ~U[2026-06-05 15:01:00Z],
+             last_seen: ~U[2026-06-05 15:01:21Z]
+           } = incident
+
+    assert length(incident.evidence) == 4
+    [oldest | _] = incident.evidence
+    assert oldest.at == ~U[2026-06-05 15:01:00Z]
+  end
 end

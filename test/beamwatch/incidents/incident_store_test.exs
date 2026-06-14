@@ -97,6 +97,56 @@ defmodule BeamWatch.Incidents.IncidentStoreTest do
     assert state.incidents["container_restart_loop:plex"].silence_scope == nil
   end
 
+  test "clear_silence on type-scoped incident re-activates all incidents of that type", %{
+    pid: store
+  } do
+    Enum.each(four_plex_dies(), &IncidentStore.ingest_line(store, &1))
+
+    sonarr_dies = [
+      pl("docker.log", 1000, "container=sonarr event=die exit_code=137"),
+      pl("docker.log", 1008, "container=sonarr event=die exit_code=137"),
+      pl("docker.log", 1015, "container=sonarr event=die exit_code=137"),
+      pl("docker.log", 1021, "container=sonarr event=die exit_code=137")
+    ]
+
+    Enum.each(sonarr_dies, &IncidentStore.ingest_line(store, &1))
+    _ = IncidentStore.get_state(store)
+
+    :ok = IncidentStore.silence(store, "container_restart_loop:plex", :type)
+    _ = IncidentStore.get_state(store)
+
+    :ok = IncidentStore.clear_silence(store, "container_restart_loop:plex")
+    state = IncidentStore.get_state(store)
+
+    assert state.incidents["container_restart_loop:plex"].status == :active
+    assert state.incidents["container_restart_loop:sonarr"].status == :active
+    refute MapSet.member?(state.silenced_types, :container_restart_loop)
+  end
+
+  test "clear_type_silence re-activates all silenced incidents of that type", %{pid: store} do
+    Enum.each(four_plex_dies(), &IncidentStore.ingest_line(store, &1))
+
+    sonarr_dies = [
+      pl("docker.log", 1000, "container=sonarr event=die exit_code=137"),
+      pl("docker.log", 1008, "container=sonarr event=die exit_code=137"),
+      pl("docker.log", 1015, "container=sonarr event=die exit_code=137"),
+      pl("docker.log", 1021, "container=sonarr event=die exit_code=137")
+    ]
+
+    Enum.each(sonarr_dies, &IncidentStore.ingest_line(store, &1))
+    _ = IncidentStore.get_state(store)
+
+    :ok = IncidentStore.silence(store, "container_restart_loop:plex", :type)
+    _ = IncidentStore.get_state(store)
+
+    :ok = IncidentStore.clear_type_silence(store, :container_restart_loop)
+    state = IncidentStore.get_state(store)
+
+    assert state.incidents["container_restart_loop:plex"].status == :active
+    assert state.incidents["container_restart_loop:sonarr"].status == :active
+    refute MapSet.member?(state.silenced_types, :container_restart_loop)
+  end
+
   test "malformed lines are tracked in source health parse_failures", %{pid: store} do
     IncidentStore.ingest_malformed(store, "docker.log")
     IncidentStore.ingest_malformed(store, "docker.log")

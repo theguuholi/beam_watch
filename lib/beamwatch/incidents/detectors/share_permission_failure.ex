@@ -4,7 +4,7 @@ defmodule BeamWatch.Incidents.Detectors.SharePermissionFailure do
   alias BeamWatch.Incidents.Incident
   alias BeamWatch.Ingestion.ParsedLine
 
-  @relevant_sources ~w[smb.log nfs.log]
+  @relevant_sources ~w[smb.log nfs.log app.log]
   @window_seconds 600
 
   @spec process(ParsedLine.t(), map(), map()) :: {map(), map()}

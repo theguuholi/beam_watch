@@ -138,6 +138,111 @@ defmodule BeamWatchWeb.DashboardLiveTest do
     assert html =~ "ok"
   end
 
+  test "evidence pane shows timestamp for each evidence line", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/")
+
+    incident = %Incident{
+      id: "container_restart_loop:plex",
+      type: :container_restart_loop,
+      resource: "plex",
+      severity: :critical,
+      status: :active,
+      first_seen: ~U[2026-06-05 15:01:40Z],
+      last_seen: ~U[2026-06-05 15:01:55Z],
+      evidence: [
+        %{source: "docker.log", line: "container=plex event=die", at: ~U[2026-06-05 15:01:55Z]},
+        %{source: "docker.log", line: "container=plex event=die", at: ~U[2026-06-05 15:01:40Z]}
+      ],
+      silence_scope: nil
+    }
+
+    Phoenix.PubSub.broadcast(BeamWatch.PubSub, "beamwatch:dashboard", {
+      :dashboard_updated,
+      %{
+        incidents: %{incident.id => incident},
+        source_health: %{},
+        recent_activity: [],
+        silenced_types: MapSet.new()
+      }
+    })
+
+    render_click(view, "toggle-evidence", %{"id" => "container_restart_loop:plex"})
+    html = render(view)
+    assert html =~ "15:01:40"
+    assert html =~ "15:01:55"
+  end
+
+  test "evidence is displayed oldest first", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/")
+
+    incident = %Incident{
+      id: "container_restart_loop:plex",
+      type: :container_restart_loop,
+      resource: "plex",
+      severity: :critical,
+      status: :active,
+      first_seen: ~U[2026-06-05 15:01:40Z],
+      last_seen: ~U[2026-06-05 15:01:55Z],
+      evidence: [
+        %{source: "docker.log", line: "NEWEST", at: ~U[2026-06-05 15:01:55Z]},
+        %{source: "docker.log", line: "OLDEST", at: ~U[2026-06-05 15:01:40Z]}
+      ],
+      silence_scope: nil
+    }
+
+    Phoenix.PubSub.broadcast(BeamWatch.PubSub, "beamwatch:dashboard", {
+      :dashboard_updated,
+      %{
+        incidents: %{incident.id => incident},
+        source_health: %{},
+        recent_activity: [],
+        silenced_types: MapSet.new()
+      }
+    })
+
+    render_click(view, "toggle-evidence", %{"id" => "container_restart_loop:plex"})
+    html = render(view)
+    oldest_pos = :binary.match(html, "OLDEST") |> elem(0)
+    newest_pos = :binary.match(html, "NEWEST") |> elem(0)
+    assert oldest_pos < newest_pos
+  end
+
+  test "silenced types section shows type name and clear button", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/")
+
+    Phoenix.PubSub.broadcast(BeamWatch.PubSub, "beamwatch:dashboard", {
+      :dashboard_updated,
+      %{
+        incidents: %{},
+        source_health: %{},
+        recent_activity: [],
+        silenced_types: MapSet.new([:container_restart_loop])
+      }
+    })
+
+    html = render(view)
+    assert html =~ "container_restart_loop"
+    assert html =~ "clear-type-silence"
+  end
+
+  test "clear-type-silence event fires without crash", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/")
+
+    Phoenix.PubSub.broadcast(BeamWatch.PubSub, "beamwatch:dashboard", {
+      :dashboard_updated,
+      %{
+        incidents: %{},
+        source_health: %{},
+        recent_activity: [],
+        silenced_types: MapSet.new([:container_restart_loop])
+      }
+    })
+
+    render(view)
+    render_click(view, "clear-type-silence", %{"type" => "container_restart_loop"})
+    assert render(view)
+  end
+
   defp restore_env(key, nil), do: Application.delete_env(:beamwatch, key)
   defp restore_env(key, value), do: Application.put_env(:beamwatch, key, value)
 end

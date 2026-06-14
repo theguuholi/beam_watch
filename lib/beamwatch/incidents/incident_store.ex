@@ -69,6 +69,11 @@ defmodule BeamWatch.Incidents.IncidentStore do
     GenServer.call(server, {:clear_silence, incident_id})
   end
 
+  @spec clear_type_silence(GenServer.server(), atom()) :: :ok
+  def clear_type_silence(server \\ __MODULE__, type) do
+    GenServer.call(server, {:clear_type_silence, type})
+  end
+
   @spec reset(GenServer.server()) :: :ok
   def reset(server \\ __MODULE__) do
     GenServer.call(server, :reset)
@@ -199,19 +204,24 @@ defmodule BeamWatch.Incidents.IncidentStore do
 
   @impl true
   def handle_call({:clear_silence, id}, _from, state) do
-    silenced_types =
+    new_state =
       case Map.get(state.incidents, id) do
-        %Incident{silence_scope: :type, type: type} -> MapSet.delete(state.silenced_types, type)
-        _ -> state.silenced_types
+        %Incident{silence_scope: :type, type: type} ->
+          unsilence_type(state, type)
+
+        _ ->
+          update_incident(state, id, &%{&1 | status: :active, silence_scope: nil})
       end
 
-    state =
-      state
-      |> Map.put(:silenced_types, silenced_types)
-      |> update_incident(id, &%{&1 | status: :active, silence_scope: nil})
+    broadcast(new_state)
+    {:reply, :ok, new_state}
+  end
 
-    broadcast(state)
-    {:reply, :ok, state}
+  @impl true
+  def handle_call({:clear_type_silence, type}, _from, state) do
+    new_state = unsilence_type(state, type)
+    broadcast(new_state)
+    {:reply, :ok, new_state}
   end
 
   # --- Helpers ---
@@ -253,6 +263,19 @@ defmodule BeamWatch.Incidents.IncidentStore do
       nil -> state
       inc -> %{state | incidents: Map.put(state.incidents, id, fun.(inc))}
     end
+  end
+
+  defp unsilence_type(state, type) do
+    incidents =
+      Map.new(state.incidents, fn {k, inc} ->
+        if inc.type == type and inc.silence_scope == :type do
+          {k, %{inc | status: :active, silence_scope: nil}}
+        else
+          {k, inc}
+        end
+      end)
+
+    %{state | silenced_types: MapSet.delete(state.silenced_types, type), incidents: incidents}
   end
 
   defp broadcast(state) do

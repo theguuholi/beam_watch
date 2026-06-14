@@ -75,6 +75,11 @@ defmodule BeamWatchWeb.DashboardLive do
     {:noreply, socket}
   end
 
+  def handle_event("clear-type-silence", %{"type" => type}, socket) do
+    IncidentStore.clear_type_silence(String.to_existing_atom(type))
+    {:noreply, socket}
+  end
+
   def handle_event("dev-add-validation-logs", _params, socket) do
     if socket.assigns.dev_log_controls_enabled? do
       :ok = DevControls.add_validation_logs()
@@ -109,6 +114,26 @@ defmodule BeamWatchWeb.DashboardLive do
           <.stat_card label="Active incidents" value={active_count(@incidents)} />
           <.stat_card label="Log sources" value={map_size(@source_health)} />
           <.stat_card label="Silenced types" value={MapSet.size(@silenced_types)} />
+        </div>
+
+        <div :if={MapSet.size(@silenced_types) > 0} class="rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <h2 class="mb-2 text-sm font-semibold uppercase tracking-wide text-amber-700">
+            Silenced Types
+          </h2>
+          <div class="flex flex-wrap gap-2">
+            <%= for type <- Enum.sort(@silenced_types) do %>
+              <div class="flex items-center gap-2 rounded border border-amber-300 bg-white px-3 py-1.5 text-xs">
+                <span class="font-mono text-zinc-700">{type}</span>
+                <button
+                  phx-click="clear-type-silence"
+                  phx-value-type={type}
+                  class="text-amber-600 hover:text-amber-800 underline"
+                >
+                  clear
+                </button>
+              </div>
+            <% end %>
+          </div>
         </div>
 
         <section>
@@ -274,9 +299,10 @@ defmodule BeamWatchWeb.DashboardLive do
           :if={@expanded}
           class="mt-2 max-h-48 overflow-auto rounded bg-zinc-950 p-3 font-mono text-xs text-zinc-300"
         >
-          <%= for ev <- @incident.evidence do %>
+          <%= for ev <- Enum.reverse(@incident.evidence) do %>
             <div class="flex gap-2 leading-6">
-              <span class="shrink-0 text-zinc-500">[{ev.source}]</span>
+              <span class="shrink-0 text-zinc-500">{format_dt(ev.at)}</span>
+              <span class="shrink-0 text-zinc-400">[{ev.source}]</span>
               <span class="text-zinc-200">{ev.line}</span>
             </div>
           <% end %>
