@@ -5,6 +5,7 @@ defmodule BeamWatch.Ingestion.LogWatcher do
 
   alias BeamWatch.Incidents.IncidentStore
   alias BeamWatch.Ingestion.LogParser
+  alias BeamWatch.Ingestion.WatcherState
   alias BeamWatch.SourceHealth
 
   @default_poll_ms 500
@@ -26,37 +27,39 @@ defmodule BeamWatch.Ingestion.LogWatcher do
   @impl true
   def init(%{log_dir: log_dir, store: store, poll_ms: poll_ms}) do
     schedule_poll(poll_ms)
-    {:ok, %{log_dir: log_dir, store: store, poll_ms: poll_ms, files: %{}}}
+    {:ok, %{log_dir: log_dir, store: store, poll_ms: poll_ms, watcher: WatcherState.new()}}
   end
 
   @impl true
   def handle_info(:poll, state) do
-    new_files = poll_directory(state.log_dir, state.files, state.store)
+    new_watcher = poll_directory(state.log_dir, state.watcher, state.store)
     schedule_poll(state.poll_ms)
-    {:noreply, %{state | files: new_files}}
+    {:noreply, %{state | watcher: new_watcher}}
   end
 
   defp schedule_poll(ms), do: Process.send_after(self(), :poll, ms)
 
-  defp poll_directory(log_dir, files, store) do
+  # --- File polling ---
+
+  defp poll_directory(log_dir, watcher, store) do
     case File.ls(log_dir) do
       {:ok, entries} ->
         entries
         |> Enum.filter(&(Path.extname(&1) == ".log"))
-        |> Enum.reduce(files, &poll_file(&1, log_dir, &2, store))
+        |> Enum.reduce(watcher, &poll_file(&1, log_dir, &2, store))
 
       {:error, _} ->
-        files
+        watcher
     end
   end
 
-  defp poll_file(filename, log_dir, files, store) do
+  defp poll_file(filename, log_dir, watcher, store) do
     path = Path.join(log_dir, filename)
-    %{offset: offset, buffer: buffer} = Map.get(files, filename, %{offset: 0, buffer: ""})
+    %{offset: offset, buffer: buffer} = WatcherState.get(watcher, filename)
 
     case File.stat(path) do
       {:ok, %File.Stat{size: size}} ->
-        handle_file_readable(filename, path, size, offset, buffer, files, store)
+        handle_file_readable(filename, path, size, offset, buffer, watcher, store)
 
       {:error, _} ->
         IncidentStore.update_source_health(store, %SourceHealth{
@@ -70,13 +73,13 @@ defmodule BeamWatch.Ingestion.LogWatcher do
           rotated?: false
         })
 
-        Map.delete(files, filename)
+        WatcherState.remove(watcher, filename)
     end
   end
 
-  defp handle_file_readable(filename, path, size, offset, buffer, files, store) do
-    {offset, buffer, rotated?} =
-      if size < offset, do: {0, "", true}, else: {offset, buffer, false}
+  defp handle_file_readable(filename, path, size, offset, buffer, watcher, store) do
+    rotated? = WatcherState.rotated?(size, offset)
+    {offset, buffer} = if rotated?, do: {0, ""}, else: {offset, buffer}
 
     {new_offset, new_buffer, failures, last_log_at} =
       if size > offset do
@@ -100,7 +103,7 @@ defmodule BeamWatch.Ingestion.LogWatcher do
       Enum.each(1..failures, fn _ -> IncidentStore.ingest_malformed(store, filename) end)
     end
 
-    Map.put(files, filename, %{offset: new_offset, buffer: new_buffer})
+    WatcherState.put(watcher, filename, new_offset, new_buffer)
   end
 
   defp process_new_bytes(path, offset, buffer, filename, store) do
@@ -111,13 +114,12 @@ defmodule BeamWatch.Ingestion.LogWatcher do
         File.close(file)
 
         new_bytes = if is_binary(new_bytes), do: new_bytes, else: ""
-        all_content = buffer <> new_bytes
-        {complete, remainder} = split_lines(all_content)
+        {complete, remainder} = WatcherState.split_lines(buffer <> new_bytes)
 
         {failures, last_log_at} =
           Enum.reduce(complete, {0, nil}, &parse_and_ingest(&1, &2, filename, store))
 
-        consumed = byte_size(all_content) - byte_size(remainder)
+        consumed = byte_size(buffer <> new_bytes) - byte_size(remainder)
         {offset + consumed, remainder, failures, last_log_at}
 
       {:error, _} ->
@@ -134,12 +136,5 @@ defmodule BeamWatch.Ingestion.LogWatcher do
       {:malformed, _} ->
         {failures + 1, last_log_at}
     end
-  end
-
-  defp split_lines(content) do
-    parts = String.split(content, "\n")
-    {last, rest} = List.pop_at(parts, -1)
-    complete = Enum.reject(rest, &(String.trim(&1) == ""))
-    {complete, last || ""}
   end
 end
