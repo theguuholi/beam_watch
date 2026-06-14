@@ -1,5 +1,5 @@
 <Layouts.app flash={@flash}>
-  <div class="mx-auto max-w-7xl space-y-8 p-6">
+  <div class="mx-auto space-y-8 p-6">
     <div class="space-y-1">
       <p class="text-xs font-semibold uppercase tracking-widest text-zinc-400">BeamWatch</p>
       <h1 class="text-2xl font-bold tracking-tight text-zinc-950">Incident Triage</h1>
@@ -19,18 +19,19 @@
         Silenced Types
       </h2>
       <div class="flex flex-wrap gap-2">
-        <%= for type <- Enum.sort(@store_state.silenced_types) do %>
-          <div class="flex items-center gap-2 rounded border border-amber-300 bg-white px-3 py-1.5 text-xs">
-            <span class="font-mono text-zinc-700">{type}</span>
-            <button
-              phx-click="clear-type-silence"
-              phx-value-type={type}
-              class="text-amber-600 hover:text-amber-800 underline"
-            >
-              clear
-            </button>
-          </div>
-        <% end %>
+        <div
+          :for={type <- Enum.sort(@store_state.silenced_types)}
+          class="flex items-center gap-2 rounded border border-amber-300 bg-white px-3 py-1.5 text-xs"
+        >
+          <span class="font-mono text-zinc-700">{type}</span>
+          <button
+            phx-click="clear-type-silence"
+            phx-value-type={type}
+            class="text-amber-600 hover:text-amber-800 underline"
+          >
+            clear
+          </button>
+        </div>
       </div>
     </div>
 
@@ -45,12 +46,11 @@
         No active incidents
       </div>
       <div class="space-y-3">
-        <%= for incident <- sorted_incidents(@store_state.incidents) do %>
-          <.incident_card
-            incident={incident}
-            expanded={MapSet.member?(@expanded_ids, incident.id)}
-          />
-        <% end %>
+        <.incident_card
+          :for={incident <- sorted_incidents(@store_state.incidents)}
+          incident={incident}
+          expanded={MapSet.member?(@expanded_ids, incident.id)}
+        />
       </div>
     </section>
 
@@ -77,28 +77,26 @@
             </tr>
           </thead>
           <tbody class="divide-y divide-zinc-100">
-            <%= for {_file, health} <- Enum.sort(@store_state.source_health) do %>
-              <tr>
-                <td class="px-4 py-2 font-mono text-xs text-zinc-700">{health.file}</td>
-                <td class="px-4 py-2">
-                  <span class={[
-                    "inline-block rounded-full px-2 py-0.5 text-xs font-semibold",
-                    health_badge_class(health)
-                  ]}>
-                    {health_label(health)}
-                  </span>
-                </td>
-                <td class="px-4 py-2 text-zinc-600">{format_bytes(health.size_bytes)}</td>
-                <td class="px-4 py-2 text-xs text-zinc-500">{format_dt(health.last_read_at)}</td>
-                <td class="px-4 py-2 text-xs text-zinc-500">{format_dt(health.last_log_at)}</td>
-                <td class="px-4 py-2">
-                  <span :if={health.parse_failures > 0} class="font-semibold text-amber-600">
-                    {health.parse_failures}
-                  </span>
-                  <span :if={health.parse_failures == 0} class="text-zinc-400">0</span>
-                </td>
-              </tr>
-            <% end %>
+            <tr :for={{_file, health} <- Enum.sort(@store_state.source_health)}>
+              <td class="px-4 py-2 font-mono text-xs text-zinc-700">{health.file}</td>
+              <td class="px-4 py-2">
+                <span class={[
+                  "inline-block rounded-full px-2 py-0.5 text-xs font-semibold",
+                  health_badge_class(health)
+                ]}>
+                  {health_label(health)}
+                </span>
+              </td>
+              <td class="px-4 py-2 text-zinc-600">{format_bytes(health.size_bytes)}</td>
+              <td class="px-4 py-2 text-xs text-zinc-500">{format_dt(health.last_read_at)}</td>
+              <td class="px-4 py-2 text-xs text-zinc-500">{format_dt(health.last_log_at)}</td>
+              <td class="px-4 py-2">
+                <span :if={health.parse_failures > 0} class="font-semibold text-amber-600">
+                  {health.parse_failures}
+                </span>
+                <span :if={health.parse_failures == 0} class="text-zinc-400">0</span>
+              </td>
+            </tr>
           </tbody>
         </table>
       </div>
@@ -110,13 +108,11 @@
       </h2>
       <div class="max-h-64 overflow-auto rounded-lg border border-zinc-200 bg-zinc-950 p-4 font-mono text-xs text-zinc-300">
         <div :if={@store_state.recent_activity == []} class="text-zinc-500">No activity yet.</div>
-        <%= for entry <- @store_state.recent_activity do %>
-          <div class="flex gap-3 leading-6">
-            <span class="shrink-0 text-zinc-500">{format_dt(entry.at)}</span>
-            <span class="shrink-0 text-zinc-400">[{entry.source}]</span>
-            <span class="truncate text-zinc-200">{entry.line}</span>
-          </div>
-        <% end %>
+        <div :for={entry <- @store_state.recent_activity} class="flex gap-3 leading-6">
+          <span class="shrink-0 text-zinc-500">{format_dt(entry.at)}</span>
+          <span class="shrink-0 text-zinc-400">[{entry.source}]</span>
+          <span class="truncate text-zinc-200">{entry.line}</span>
+        </div>
       </div>
     </section>
 
