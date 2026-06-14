@@ -67,7 +67,10 @@ defmodule BeamWatchWeb.DashboardLive.Index do
   end
 
   def handle_event("clear-type-silence", %{"type" => type}, socket) do
-    IncidentStore.clear_type_silence(String.to_existing_atom(type))
+    type
+    |> String.to_existing_atom()
+    |> IncidentStore.clear_type_silence()
+
     {:noreply, socket}
   end
 

@@ -42,7 +42,11 @@ defmodule BeamWatch.Ingestion.WatcherStateTest do
   # --- remove/2 ---
 
   test "remove/2 removes a tracked file" do
-    s = WatcherState.new() |> WatcherState.put("docker.log", 100, "") |> WatcherState.remove("docker.log")
+    s =
+      WatcherState.new()
+      |> WatcherState.put("docker.log", 100, "")
+      |> WatcherState.remove("docker.log")
+
     assert s.files == %{}
   end
 

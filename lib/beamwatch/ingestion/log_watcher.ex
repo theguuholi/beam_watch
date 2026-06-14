@@ -44,7 +44,8 @@ defmodule BeamWatch.Ingestion.LogWatcher do
 
   defp normalize_state(%{files: files} = old) do
     watcher =
-      Enum.reduce(files, WatcherState.new(), fn {filename, %{offset: offset, buffer: buffer}}, acc ->
+      Enum.reduce(files, WatcherState.new(), fn {filename, %{offset: offset, buffer: buffer}},
+                                                acc ->
         WatcherState.put(acc, filename, offset, buffer)
       end)
 

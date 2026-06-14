@@ -252,7 +252,7 @@ defmodule BeamWatchWeb.DashboardLive.IndexTest do
   describe "handle_event/3 - dev-clear-log-dir" do
     test "empties the target log directory", %{conn: conn, target: target} do
       File.mkdir_p!(target)
-      File.write!(Path.join(target, "app.log"), "data\n")
+      target |> Path.join("app.log") |> File.write!("data\n")
       {:ok, view, _html} = live(conn, ~p"/")
       render_click(view, "dev-clear-log-dir", %{})
       assert File.ls!(target) == []
@@ -477,7 +477,16 @@ defmodule BeamWatchWeb.DashboardLive.IndexTest do
   end
 
   defp incident_with_evidence do
-    %{active_incident() | evidence: [%{source: "docker.log", line: "container plex exited with code 1", at: ~U[2026-06-05 15:01:50Z]}]}
+    %{
+      active_incident()
+      | evidence: [
+          %{
+            source: "docker.log",
+            line: "container plex exited with code 1",
+            at: ~U[2026-06-05 15:01:50Z]
+          }
+        ]
+    }
   end
 
   defp seed_incident(incident) do

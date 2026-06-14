@@ -11,7 +11,13 @@ defmodule BeamWatch.Incidents.StoreStateTest do
   defp pl(source, offset_seconds, payload) do
     base = ~U[2026-06-05 15:00:00Z]
     at = DateTime.add(base, offset_seconds, :second)
-    %ParsedLine{at: at, source: source, payload: payload, raw: "#{DateTime.to_iso8601(at)} #{payload}"}
+
+    %ParsedLine{
+      at: at,
+      source: source,
+      payload: payload,
+      raw: "#{DateTime.to_iso8601(at)} #{payload}"
+    }
   end
 
   defp plex_incident do
@@ -70,9 +76,10 @@ defmodule BeamWatch.Incidents.StoreStateTest do
   end
 
   test "ingest_line/2 caps recent_activity at 50 entries" do
-    s = Enum.reduce(1..55, state(), fn i, acc ->
-      StoreState.ingest_line(acc, pl("syslog.log", i, "emhttpd: event=#{i}"))
-    end)
+    s =
+      Enum.reduce(1..55, state(), fn i, acc ->
+        StoreState.ingest_line(acc, pl("syslog.log", i, "emhttpd: event=#{i}"))
+      end)
 
     assert length(s.recent_activity) == 50
     assert hd(s.recent_activity).line =~ "event=55"
@@ -146,7 +153,7 @@ defmodule BeamWatch.Incidents.StoreStateTest do
       sonarr_incident().id => sonarr_incident()
     }
 
-    s = state_with(incidents) |> StoreState.silence_type("container_restart_loop:plex")
+    s = incidents |> state_with() |> StoreState.silence_type("container_restart_loop:plex")
 
     assert s.incidents["container_restart_loop:plex"].status == :silenced
     assert s.incidents["container_restart_loop:sonarr"].status == :silenced
@@ -170,7 +177,8 @@ defmodule BeamWatch.Incidents.StoreStateTest do
 
   test "clear_silence/2 on :incident scope restores :active and nil scope" do
     s =
-      state_with(%{plex_incident().id => plex_incident()})
+      %{plex_incident().id => plex_incident()}
+      |> state_with()
       |> StoreState.silence_incident("container_restart_loop:plex")
       |> StoreState.clear_silence("container_restart_loop:plex")
 
@@ -186,7 +194,8 @@ defmodule BeamWatch.Incidents.StoreStateTest do
     }
 
     s =
-      state_with(incidents)
+      incidents
+      |> state_with()
       |> StoreState.silence_type("container_restart_loop:plex")
       |> StoreState.clear_silence("container_restart_loop:plex")
 
@@ -204,7 +213,8 @@ defmodule BeamWatch.Incidents.StoreStateTest do
     }
 
     s =
-      state_with(incidents)
+      incidents
+      |> state_with()
       |> StoreState.silence_type("container_restart_loop:plex")
       |> StoreState.clear_type_silence(:container_restart_loop)
 
@@ -217,7 +227,8 @@ defmodule BeamWatch.Incidents.StoreStateTest do
 
   test "reset/1 clears incidents, activity, silenced types and health" do
     s =
-      state_with(%{plex_incident().id => plex_incident()})
+      %{plex_incident().id => plex_incident()}
+      |> state_with()
       |> StoreState.silence_type("container_restart_loop:plex")
       |> StoreState.ingest_malformed("docker.log")
       |> StoreState.reset()
