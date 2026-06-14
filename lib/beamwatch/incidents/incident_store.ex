@@ -75,56 +75,67 @@ defmodule BeamWatch.Incidents.IncidentStore do
 
   @impl true
   def handle_cast({:ingest_line, %ParsedLine{} = line}, state) do
+    state = normalize_state(state)
     {:noreply, mutate(state, StoreState.ingest_line(state.data, line))}
   end
 
   @impl true
   def handle_cast({:ingest_malformed, source}, state) do
+    state = normalize_state(state)
     {:noreply, mutate(state, StoreState.ingest_malformed(state.data, source))}
   end
 
   @impl true
   def handle_cast({:update_source_health, %SourceHealth{} = health}, state) do
+    state = normalize_state(state)
     {:noreply, mutate(state, StoreState.update_source_health(state.data, health))}
   end
 
   @impl true
   def handle_call(:get_state, _from, state) do
+    state = normalize_state(state)
     {:reply, state.data, state}
   end
 
   @impl true
   def handle_call(:reset, _from, state) do
+    state = normalize_state(state)
     {:reply, :ok, mutate(state, StoreState.reset(state.data))}
   end
 
   @impl true
   def handle_call({:acknowledge, id}, _from, state) do
+    state = normalize_state(state)
     {:reply, :ok, mutate(state, StoreState.acknowledge(state.data, id))}
   end
 
   @impl true
   def handle_call({:silence, id, :type}, _from, state) do
+    state = normalize_state(state)
     {:reply, :ok, mutate(state, StoreState.silence_type(state.data, id))}
   end
 
   @impl true
   def handle_call({:silence, id, :incident}, _from, state) do
+    state = normalize_state(state)
     {:reply, :ok, mutate(state, StoreState.silence_incident(state.data, id))}
   end
 
   @impl true
   def handle_call({:resolve, id}, _from, state) do
+    state = normalize_state(state)
     {:reply, :ok, mutate(state, StoreState.resolve(state.data, id))}
   end
 
   @impl true
   def handle_call({:clear_silence, id}, _from, state) do
+    state = normalize_state(state)
     {:reply, :ok, mutate(state, StoreState.clear_silence(state.data, id))}
   end
 
   @impl true
   def handle_call({:clear_type_silence, type}, _from, state) do
+    state = normalize_state(state)
     {:reply, :ok, mutate(state, StoreState.clear_type_silence(state.data, type))}
   end
 
@@ -133,5 +144,21 @@ defmodule BeamWatch.Incidents.IncidentStore do
   defp mutate(state, new_data) do
     Phoenix.PubSub.broadcast(state.pubsub, "beamwatch:dashboard", {:dashboard_updated, new_data})
     %{state | data: new_data}
+  end
+
+  # Migrates state from the old flat-map format (pre-StoreState refactor) to the
+  # current %{pubsub, data: %StoreState{}} shape. Safe to call on already-normalized state.
+  defp normalize_state(%{data: %StoreState{}} = state), do: state
+
+  defp normalize_state(%{pubsub: pubsub} = old) do
+    data = %StoreState{
+      incidents: Map.get(old, :incidents, %{}),
+      source_health: Map.get(old, :source_health, %{}),
+      recent_activity: Map.get(old, :recent_activity, []),
+      silenced_types: Map.get(old, :silenced_types, MapSet.new()),
+      detector_states: Map.get(old, :detector_states, StoreState.new().detector_states)
+    }
+
+    %{pubsub: pubsub, data: data}
   end
 end

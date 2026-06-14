@@ -32,12 +32,24 @@ defmodule BeamWatch.Ingestion.LogWatcher do
 
   @impl true
   def handle_info(:poll, state) do
+    state = normalize_state(state)
     new_watcher = poll_directory(state.log_dir, state.watcher, state.store)
     schedule_poll(state.poll_ms)
     {:noreply, %{state | watcher: new_watcher}}
   end
 
   defp schedule_poll(ms), do: Process.send_after(self(), :poll, ms)
+
+  defp normalize_state(%{watcher: %WatcherState{}} = state), do: state
+
+  defp normalize_state(%{files: files} = old) do
+    watcher =
+      Enum.reduce(files, WatcherState.new(), fn {filename, %{offset: offset, buffer: buffer}}, acc ->
+        WatcherState.put(acc, filename, offset, buffer)
+      end)
+
+    %{log_dir: old.log_dir, store: old.store, poll_ms: old.poll_ms, watcher: watcher}
+  end
 
   # --- File polling ---
 
