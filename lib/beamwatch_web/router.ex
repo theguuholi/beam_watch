@@ -17,7 +17,7 @@ defmodule BeamWatchWeb.Router do
   scope "/", BeamWatchWeb do
     pipe_through :browser
 
-    live "/", DashboardLive, :index
+    live "/", DashboardLive.Index, :index
   end
 
   # Other scopes may use custom stacks.
